@@ -1,163 +1,55 @@
 param(
     [string]$Message = "Claude a besoin de votre intervention",
-    [string]$SessionInfo = "",
+    [string]$Title = "Claude Code",
     [switch]$NoSound
 )
 
-Add-Type -AssemblyName PresentationFramework
-Add-Type -AssemblyName PresentationCore
-Add-Type -AssemblyName WindowsBase
-Add-Type -AssemblyName System.Windows.Forms
+# Utiliser les Toast Notifications Windows (fonctionne depuis WSL)
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
-# API pour l'effet Acrylic/Blur (Windows 10/11)
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
+# Déterminer le son
+$silentAttr = if ($NoSound) { "true" } else { "false" }
 
-public class AcrylicHelper {
-    [DllImport("user32.dll")]
-    public static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct WindowCompositionAttributeData {
-        public WindowCompositionAttribute Attribute;
-        public IntPtr Data;
-        public int SizeOfData;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct AccentPolicy {
-        public AccentState AccentState;
-        public int AccentFlags;
-        public int GradientColor;
-        public int AnimationId;
-    }
-
-    public enum WindowCompositionAttribute {
-        WCA_ACCENT_POLICY = 19
-    }
-
-    public enum AccentState {
-        ACCENT_DISABLED = 0,
-        ACCENT_ENABLE_GRADIENT = 1,
-        ACCENT_ENABLE_TRANSPARENTGRADIENT = 2,
-        ACCENT_ENABLE_BLURBEHIND = 3,
-        ACCENT_ENABLE_ACRYLICBLURBEHIND = 4,
-        ACCENT_INVALID_STATE = 5
-    }
-
-    public static void EnableAcrylic(IntPtr handle, int gradientColor) {
-        var accent = new AccentPolicy();
-        accent.AccentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
-        accent.GradientColor = gradientColor;
-
-        var accentSize = Marshal.SizeOf(accent);
-        var accentPtr = Marshal.AllocHGlobal(accentSize);
-        Marshal.StructureToPtr(accent, accentPtr, false);
-
-        var data = new WindowCompositionAttributeData();
-        data.Attribute = WindowCompositionAttribute.WCA_ACCENT_POLICY;
-        data.SizeOfData = accentSize;
-        data.Data = accentPtr;
-
-        SetWindowCompositionAttribute(handle, ref data);
-
-        Marshal.FreeHGlobal(accentPtr);
-    }
-}
-
-public class WindowHelper {
-    [DllImport("user32.dll")]
-    public static extern bool SetForegroundWindow(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-}
+# Template XML pour la notification toast
+$toastXml = @"
+<toast duration="long" activationType="protocol">
+    <visual>
+        <binding template="ToastGeneric">
+            <text>$Title</text>
+            <text>$Message</text>
+        </binding>
+    </visual>
+    <audio silent="$silentAttr" />
+</toast>
 "@
 
-# Créer la fenêtre XAML
-[xml]$xaml = @"
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Claude Notification"
-        WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent"
-        Topmost="True"
-        ShowInTaskbar="False"
-        Width="420"
-        Height="70"
-        ResizeMode="NoResize">
-    <Border CornerRadius="22" Background="#CC1E1E1E">
-        <Grid>
-            <TextBlock Text="MESSAGE_PLACEHOLDER"
-                       Foreground="White"
-                       FontSize="14"
-                       FontWeight="Medium"
-                       FontFamily="Segoe UI"
-                       VerticalAlignment="Center"
-                       Margin="20,0,50,0"/>
-            <TextBlock Text="✕"
-                       Foreground="Gray"
-                       FontSize="16"
-                       HorizontalAlignment="Right"
-                       VerticalAlignment="Center"
-                       Margin="0,0,15,0"
-                       Name="CloseButton"
-                       Cursor="Hand"/>
-        </Grid>
-    </Border>
-</Window>
-"@
+# Créer et afficher la notification
+$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+$xml.LoadXml($toastXml)
 
-# Remplacer le placeholder par le vrai message
-$xaml.Window.Border.Grid.TextBlock[0].Text = $Message
+$toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 
-# Charger la fenêtre
-$reader = New-Object System.Xml.XmlNodeReader $xaml
-$window = [Windows.Markup.XamlReader]::Load($reader)
+# Liste des AppId à essayer
+$appIds = @(
+    "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App",
+    "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe",
+    "Windows.SystemToast.Default"
+)
 
-# Positionner en bas au centre
-$screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-$window.Left = ($screen.Width - $window.Width) / 2
-$window.Top = $screen.Height - $window.Height - 100
-
-# Appliquer l'effet Acrylic après l'affichage
-$window.Add_Loaded({
-    $hwnd = (New-Object System.Windows.Interop.WindowInteropHelper $window).Handle
-    # Couleur: AABBGGRR format, AA=alpha (CC = 80% opaque)
-    [AcrylicHelper]::EnableAcrylic($hwnd, 0xCC1E1E1E)
-})
-
-# Fonction pour activer Windows Terminal
-function Activate-WindowsTerminal {
-    # Chercher Windows Terminal
-    $wtProcess = Get-Process -Name "WindowsTerminal" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($wtProcess) {
-        [WindowHelper]::SetForegroundWindow($wtProcess.MainWindowHandle) | Out-Null
+$success = $false
+foreach ($appId in $appIds) {
+    try {
+        [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
+        $success = $true
+        break
+    } catch {
+        continue
     }
 }
 
-# Clic sur la fenêtre = activer Terminal et fermer
-$window.Add_MouseLeftButtonDown({
-    Activate-WindowsTerminal
-    $window.Close()
-})
-
-# Auto-fermeture après 10 secondes
-$timer = New-Object System.Windows.Threading.DispatcherTimer
-$timer.Interval = [TimeSpan]::FromSeconds(10)
-$timer.Add_Tick({
-    $timer.Stop()
-    $window.Close()
-})
-$timer.Start()
-
-# Afficher la fenêtre
-$window.ShowDialog() | Out-Null
+if (-not $success) {
+    # Fallback ultime : MessageBox
+    Add-Type -AssemblyName System.Windows.Forms
+    [System.Windows.Forms.MessageBox]::Show($Message, $Title, [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+}

@@ -27,7 +27,7 @@ Système de notification desktop glassmorphism pour [Claude Code](https://claude
 | `generic/` | macOS | Python + AppKit (PyObjC) | ✅ Vrai blur |
 | `linux/` | Linux | Python + GTK3 | Semi-transparent |
 | `windows/` | Windows | PowerShell + WPF | ✅ Vrai blur (Acrylic) |
-| `wsl-powershell/` | WSL | Bash + PowerShell | ✅ Vrai blur (Acrylic) |
+| `wsl-powershell/` | WSL | Bash + PowerShell | Toast Notification Windows |
 | `wsl-gtk/` | WSL | Python + GTK3 via WSLg | Semi-transparent |
 
 ## Installation rapide

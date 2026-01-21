@@ -1,11 +1,15 @@
-# Claude Code - Notification Glassmorphism pour WSL (PowerShell)
+# Claude Code - Notification Toast pour WSL (PowerShell)
 
-Système de notification desktop pour Claude Code sur WSL utilisant PowerShell pour afficher une notification Windows native avec :
-- Notification flottante style glassmorphism (effet Acrylic Windows)
+Système de notification desktop pour Claude Code sur WSL utilisant PowerShell pour afficher une **Toast Notification Windows native** avec :
+- Notification Windows native (style Windows 10/11)
 - Sons de notification Windows
-- Activation de Windows Terminal au clic
+- Fonctionne depuis WSL sans problème de contexte graphique
 
-**Cette version utilise PowerShell** pour un vrai effet glassmorphism (Acrylic blur).
+**Cette version utilise les Toast Notifications Windows** (pas WPF) car WPF ne fonctionne pas correctement depuis WSL.
+
+## Pourquoi Toast et pas WPF ?
+
+WPF (Windows Presentation Foundation) nécessite un contexte graphique complet qui n'est pas disponible quand PowerShell est lancé depuis WSL. Les Toast Notifications passent par le système de notifications Windows et fonctionnent parfaitement depuis WSL.
 
 ## Prérequis
 
@@ -13,13 +17,15 @@ Système de notification desktop pour Claude Code sur WSL utilisant PowerShell p
 - PowerShell 5.1+ (inclus avec Windows)
 - Windows Terminal (recommandé)
 
-## Avantages de cette version
+## Comparaison des versions WSL
 
-| | Version PowerShell | Version GTK (wsl/) |
+| | Version Toast (cette version) | Version GTK (wsl-gtk/) |
 |---|---|---|
-| Glassmorphism | ✅ Vrai blur Acrylic | ❌ Semi-transparent |
+| Type | Toast Notification Windows | Fenêtre GTK flottante |
+| Style | Notification système native | Glassmorphism semi-transparent |
 | Prérequis | PowerShell (inclus) | WSLg requis |
 | Compatibilité | WSL1 et WSL2 | WSL2 + WSLg uniquement |
+| Position | Centre de notifications | Bas de l'écran |
 
 ## Installation
 
@@ -64,13 +70,13 @@ Dans `~/.claude/settings.json`, ajoute :
 ## Utilisation
 
 1. Lance `claude` dans WSL
-2. Quand Claude demande une validation ou termine, la notification Windows apparaît
-3. Clique sur la notification pour revenir à Windows Terminal
+2. Quand Claude demande une validation ou termine, une Toast Notification Windows apparaît
+3. Clique sur la notification pour l'ouvrir
 
 ## Fonctionnement
 
 - `notify-wrapper.sh` : Script bash qui appelle PowerShell pour le son et la notification
-- `floatbar.ps1` : Script PowerShell/WPF qui crée la notification glassmorphism
+- `floatbar.ps1` : Script PowerShell qui affiche une Toast Notification Windows
 - `bashrc-claude-function.sh` : Fonction à ajouter au shell
 
 ## Messages et Sons
@@ -90,22 +96,10 @@ Dans `notify-wrapper.sh`, modifie les valeurs de `SOUND` :
 - `Hand` - Son d'erreur critique
 - `Question` - Son de question
 
-### Changer les dimensions
-Dans `floatbar.ps1`, modifie dans le XAML :
-```xml
-Width="420"
-Height="70"
-```
-
-### Changer le border-radius
-```xml
-<Border CornerRadius="22" ...>
-```
-
-### Changer la couleur
-Format: `#AARRGGBB` (AA = alpha/transparence)
-```xml
-Background="#CC1E1E1E"
+### Changer le titre
+Dans `floatbar.ps1`, modifie le paramètre par défaut :
+```powershell
+[string]$Title = "Claude Code"
 ```
 
 ## Dépannage
@@ -115,6 +109,8 @@ Background="#CC1E1E1E"
   ```bash
   powershell.exe -Command "echo test"
   ```
+- Vérifie que les notifications sont activées dans Windows :
+  Paramètres → Système → Notifications
 - Teste manuellement :
   ```bash
   powershell.exe -ExecutionPolicy Bypass -File "$(wslpath -w ~/.claude/hooks/floatbar.ps1)" -Message "Test"
@@ -128,3 +124,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### Le son ne joue pas
 Vérifie le volume Windows et que les sons système sont activés.
+
+### Fallback MessageBox
+Si les Toast Notifications ne fonctionnent pas, le script affiche automatiquement une MessageBox comme fallback.
