@@ -12,8 +12,9 @@ param(
 $silentAttr = if ($NoSound) { "true" } else { "false" }
 
 # Template XML pour la notification toast
+# launch="wt://" ouvre Windows Terminal au clic
 $toastXml = @"
-<toast duration="long" activationType="protocol">
+<toast launch="wt://" activationType="protocol" duration="long">
     <visual>
         <binding template="ToastGeneric">
             <text>$Title</text>
