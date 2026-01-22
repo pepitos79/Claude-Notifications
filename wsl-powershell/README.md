@@ -37,6 +37,7 @@ mkdir -p ~/.claude/hooks
 ### 2. Copier les scripts
 ```bash
 cp notify-wrapper.sh ~/.claude/hooks/
+cp notify-stop.sh ~/.claude/hooks/
 cp floatbar.ps1 ~/.claude/hooks/
 chmod +x ~/.claude/hooks/*.sh
 ```
@@ -47,8 +48,8 @@ cat bashrc-claude-function.sh >> ~/.bashrc
 source ~/.bashrc
 ```
 
-### 4. Configurer le hook Claude Code
-Dans `~/.claude/settings.json`, ajoute :
+### 4. Configurer les hooks Claude Code
+Dans `~/.claude/settings.json`, ajoute les **deux hooks** :
 ```json
 {
   "hooks": {
@@ -62,10 +63,25 @@ Dans `~/.claude/settings.json`, ajoute :
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/notify-stop.sh"
+          }
+        ]
+      }
     ]
   }
 }
 ```
+
+**Important** : Il faut les deux hooks :
+- `Notification` → Quand Claude a besoin d'intervention (permission)
+- `Stop` → Quand Claude a terminé sa tâche
 
 ## Utilisation
 
@@ -75,7 +91,8 @@ Dans `~/.claude/settings.json`, ajoute :
 
 ## Fonctionnement
 
-- `notify-wrapper.sh` : Script bash qui appelle PowerShell pour le son et la notification
+- `notify-wrapper.sh` : Notification "Claude a besoin de votre intervention" (hook Notification)
+- `notify-stop.sh` : Notification "Claude a terminé" (hook Stop)
 - `floatbar.ps1` : Script PowerShell qui affiche une Toast Notification Windows
 - `bashrc-claude-function.sh` : Fonction à ajouter au shell
 

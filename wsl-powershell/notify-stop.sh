@@ -1,11 +1,11 @@
 #!/bin/bash
-# Notification quand Claude a besoin d'intervention - Version WSL avec PowerShell
-# À utiliser avec le hook "Notification"
+# Notification quand Claude termine - Version WSL avec PowerShell
+# À utiliser avec le hook "Stop"
 
 HOOKS_DIR="$HOME/.claude/hooks"
 
-MESSAGE="Claude a besoin de votre intervention"
-SOUND="Asterisk"
+MESSAGE="Claude a terminé de réaliser votre demande"
+SOUND="Exclamation"
 
 # Jouer le son via PowerShell (Windows)
 powershell.exe -Command "[System.Media.SystemSounds]::${SOUND}.Play()" 2>/dev/null &
