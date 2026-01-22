@@ -173,6 +173,12 @@ La notification apparaît en bas au centre de l'écran avec :
 - Bouton de fermeture
 - Coins arrondis (radius 22px)
 
+## Notes et limitations
+
+⚠️ **Versions non testées** : `wsl-gtk/`, `windows/` et `linux/` n'ont pas été testées en conditions réelles.
+
+⚠️ **WSL-PowerShell** : Le clic sur la notification ne redirige pas vers le bon terminal ou le bon onglet. C'est une limitation de l'API Toast Notification Windows depuis le contexte WSL.
+
 ## Licence
 
 MIT License - Libre d'utilisation et de modification.

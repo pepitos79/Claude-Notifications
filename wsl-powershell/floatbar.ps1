@@ -30,21 +30,6 @@ $xml.LoadXml($toastXml)
 
 $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 
-# Variable pour savoir si on doit activer le terminal
-$script:shouldActivate = $false
-$script:dismissed = $false
-
-# Événement au clic sur la notification
-Register-ObjectEvent -InputObject $toast -EventName Activated -Action {
-    $script:shouldActivate = $true
-    $script:dismissed = $true
-} | Out-Null
-
-# Événement quand la notification est fermée
-Register-ObjectEvent -InputObject $toast -EventName Dismissed -Action {
-    $script:dismissed = $true
-} | Out-Null
-
 # Liste des AppId à essayer
 $appIds = @(
     "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App",
@@ -63,51 +48,7 @@ foreach ($appId in $appIds) {
     }
 }
 
-if ($success) {
-    # Attendre que la notification soit cliquée ou fermée (max 15 secondes)
-    $timeout = 15
-    $elapsed = 0
-    while (-not $script:dismissed -and $elapsed -lt $timeout) {
-        Start-Sleep -Milliseconds 500
-        $elapsed += 0.5
-    }
-
-    # Si l'utilisateur a cliqué, activer Windows Terminal
-    if ($script:shouldActivate) {
-        $activated = $false
-
-        # Méthode 1: WScript.Shell AppActivate (fonctionne mieux depuis contexte externe)
-        try {
-            $shell = New-Object -ComObject WScript.Shell
-            $activated = $shell.AppActivate("Windows Terminal")
-        } catch {
-            $activated = $false
-        }
-
-        # Méthode 2: Si AppActivate échoue, essayer avec le PID
-        if (-not $activated) {
-            try {
-                $wt = Get-Process -Name "WindowsTerminal" -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($wt) {
-                    $shell = New-Object -ComObject WScript.Shell
-                    $activated = $shell.AppActivate($wt.Id)
-                }
-            } catch {
-                $activated = $false
-            }
-        }
-
-        # Méthode 3: Fallback avec Microsoft.VisualBasic
-        if (-not $activated) {
-            try {
-                Add-Type -AssemblyName Microsoft.VisualBasic
-                [Microsoft.VisualBasic.Interaction]::AppActivate("Windows Terminal")
-            } catch {
-                # Ignorer les erreurs
-            }
-        }
-    }
-} else {
+if (-not $success) {
     # Fallback ultime : MessageBox
     Add-Type -AssemblyName System.Windows.Forms
     [System.Windows.Forms.MessageBox]::Show($Message, $Title, [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
