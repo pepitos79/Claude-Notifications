@@ -22,16 +22,18 @@ fi
 # Jouer le son IMMÉDIATEMENT (avant le chargement Python)
 afplay "$SOUND" &
 
-# Lire les infos de session via TERM_SESSION_ID
-SESSION_FILE="/tmp/claude_session_${TERM_SESSION_ID}"
+# Priorité: variables d'environnement (héritées du wrapper claude())
+WINDOW_ID="${CLAUDE_WINDOW_ID:-}"
+CURRENT_TTY="${CLAUDE_TTY:-}"
 
-if [ -f "$SESSION_FILE" ]; then
-    SESSION_INFO=$(cat "$SESSION_FILE")
-    WINDOW_ID=$(echo "$SESSION_INFO" | cut -d',' -f1)
-    CURRENT_TTY=$(echo "$SESSION_INFO" | cut -d',' -f2)
-else
-    WINDOW_ID=""
-    CURRENT_TTY=""
+# Fallback: fichier de session (si les env vars ne sont pas dispo)
+if [ -z "$WINDOW_ID" ] && [ -n "$TERM_SESSION_ID" ]; then
+    SESSION_FILE="/tmp/claude_session_${TERM_SESSION_ID}"
+    if [ -f "$SESSION_FILE" ]; then
+        SESSION_INFO=$(cat "$SESSION_FILE")
+        WINDOW_ID=$(echo "$SESSION_INFO" | cut -d',' -f1)
+        CURRENT_TTY=$(echo "$SESSION_INFO" | cut -d',' -f2)
+    fi
 fi
 
 # Lancer la notification (sans son, il est déjà joué)

@@ -18,8 +18,11 @@ claude() {
         return ""
     end tell
     ' 2>/dev/null)
-    # Stocker avec TERM_SESSION_ID comme clé unique
-    echo "${window_id},${current_tty}" > "/tmp/claude_session_${TERM_SESSION_ID}"
+    # Exporter comme variables d'environnement (héritées par Claude et ses hooks)
+    export CLAUDE_WINDOW_ID="$window_id"
+    export CLAUDE_TTY="$current_tty"
+    # Backup fichier (si TERM_SESSION_ID disponible)
+    [ -n "$TERM_SESSION_ID" ] && echo "${window_id},${current_tty}" > "/tmp/claude_session_${TERM_SESSION_ID}"
     # Lancer le vrai claude
     command claude "$@"
 }
